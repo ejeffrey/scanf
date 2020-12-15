@@ -95,5 +95,12 @@ def test_multiple():
     assert scanf_star("%d - %d", "52 - 11") == (52, 11)
     mac =  scanf_star("%X:%X:%X:%X:%X:%X", "04:23:AB:03:ef:01")
     assert mac == (0x4, 0x23, 0xab, 0x3, 0xef, 0x1)
-
     
+#@pytest.mark.xfail(reason="Not implemented yet")
+def test_list():
+    assert scanf_star("%[d]", "4 2 2")[0] == [4, 2, 2]
+    assert scanf_star("%[d,]", "4, 2, 2")[0] == [4, 2, 2]
+    assert scanf_star("%[x,]", "0x32, 0x12, 0x1. This is the end")[0] == [0x32, 0x12, 0x1]
+    assert scanf_star("%[i,]", "0x32, 0o10, 0B110, 53, 21")[0] == [0x32, 0o10, 0B110, 53, 21]
+    assert scanf_star("%[s]", "A bunch of words") == ("A bunch of words".split(),)
+    assert scanf_star("%[s,]", "comma, separated, values") == ("comma separated values".split(),)

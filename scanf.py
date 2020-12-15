@@ -31,8 +31,24 @@ __version__ = '1.5.2'
 __all__ = ["scanf", 'extractdata', 'scanf_translate', 'scanf_compile']
 
 
-DEBUG = False
+DEBUG = True
 
+DECIMAL_FMT = r"(?:[+-]?\d+)"
+OCTAL_FMT = r"(?:(?:0[oO])?[0-7]+)"
+HEX_FMT = r"(?:(?:0[xX])?[\dA-Fa-f]+)"
+BINARY_FMT = r"(?:(?:0[bB])?[01]+)"
+INT_FMT = r"(?:[+-]?(?:0[xXoObB])?[0-9a-fA-F]+)"
+FLOAT_FMT =  r"(?:[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)"
+
+def listify_re(fmt, delim=None, capture=False):
+    if delim is None:
+        delim = r"\s"
+    else:
+        delim = delim + r"\s"
+    if capture:
+        return r"({}(?:{}{})+)".format(fmt, delim, fmt)
+    else:
+        return r"(?:{}(?:{}{})+)".format(fmt, delim, fmt)
 
 # As you can probably see it is relatively easy to add more format types.
 # Make sure you add a second entry for each new item that adds the extra
@@ -71,6 +87,50 @@ scanf_translate = [
 
         (r"%i", r"([+-]?(?:0[xXoObB])?[0-9a-fA-F]+)", lambda x: int(x, 0)),
         (r"%\*i", r"(?:[+-]?(?:0[xXoObB])?[0-9a-fA-F]+)", None),
+
+        (r"%\[s\]", listify_re(r"\w+", capture=True), lambda x: x.split()),
+        (r"%\*\[s\]", listify_re(r"\w+", capture=False), None),
+        
+        (r"%\[d\]", listify_re(DECIMAL_FMT, capture=True), lambda x: [int(n) for n in x.split()]),
+        (r"%\*\[d\]", listify_re(DECIMAL_FMT, capture=False), None),
+
+        (r"%\[[xX]\]", listify_re(HEX_FMT, capture=True), lambda x: [int(n, 16) for n in x.split()]),
+        (r"%\*\[[xX]\]", listify_re(HEX_FMT, capture=False), None),
+
+        (r"%\[[oO]\]", listify_re(HEX_FMT, capture=True), lambda x: [int(n, 8) for n in x.split()]),
+        (r"%\*\[[oO]\]", listify_re(HEX_FMT, capture=False), None),
+        
+        (r"%\[[bB]\]", listify_re(BINARY_FMT, ',', capture=True), lambda x: [int(n, 2) for n in x.split()]),
+        (r"%\*\[[bB]\]", listify_re(BINARY_FMT, capture=False), None),
+        
+        (r"%\[i\]", listify_re(INT_FMT, capture=True), lambda x: [int(n, 0) for n in x.split()]),
+        (r"%\*\[i\]", listify_re(INT_FMT, capture=False), None),
+        
+        (r"%\[[fgeE]\]", listify_re(FLOAT_FMT, capture=True), lambda x: [float(n) for n in x.split()]),
+        (r"%\*\[[fgeE]\]", listify_re(FLOAT_FMT, capture=False), None),
+
+        # TODO: These should be replaced by a generic version that captures the delimiter
+
+        (r"%\[s,\]", listify_re(r"\w+", ',', capture=True), lambda x: [s.strip() for s in x.split(',')]),
+        (r"%\*\[s,\]", listify_re(r"\w+", ',', capture=False), None),
+        
+        (r"%\[d,\]", listify_re(DECIMAL_FMT, ',', capture=True), lambda x: [int(n) for n in x.split(',')]),
+        (r"%\*\[d,\]", listify_re(DECIMAL_FMT, ',', capture=False), None),
+
+        (r"%\[[xX],\]", listify_re(HEX_FMT, ',', capture=True), lambda x: [int(n, 16) for n in x.split(',')]),
+        (r"%\*\[[xX],\]", listify_re(HEX_FMT, ',', capture=False), None),
+
+        (r"%\[[oO],\]", listify_re(HEX_FMT, ',', capture=True), lambda x: [int(n, 8) for n in x.split(',')]),
+        (r"%\*\[[oO],\]", listify_re(HEX_FMT, ',', capture=False), None),
+        
+        (r"%\[[bB],\]", listify_re(BINARY_FMT, ',', capture=True), lambda x: [int(n, 2) for n in x.split(',')]),
+        (r"%\*\[[bB],\]", listify_re(BINARY_FMT, ',', capture=False), None),
+        
+        (r"%\[i,\]", listify_re(INT_FMT, ',', capture=True), lambda x: [int(n, 0) for n in x.split(',')]),
+        (r"%\*\[i,\]", listify_re(INT_FMT, ',', capture=False), None),
+        
+        (r"%\[[fgeE],\]", listify_re(FLOAT_FMT, ',', capture=True), lambda x: [float(n) for n in x.split(',')]),
+        (r"%\*\[[fgeE],\]", listify_re(FLOAT_FMT, ',',capture=False), None),
         
         (r"%r", r"(.*$)", lambda x: x),
         (r"%\*r", r"(?:.*$)", None),
