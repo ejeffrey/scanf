@@ -21,6 +21,7 @@ skip fields.
 """
 import re
 import sys
+import functools
 try:
     from functools import lru_cache
 except ImportError:
@@ -44,11 +45,19 @@ def listify_re(fmt, delim=None, capture=False):
     if delim is None:
         delim = r"\s"
     else:
-        delim = delim + r"\s"
+        delim = delim + r"\s*"
     if capture:
         return r"({}(?:{}{})+)".format(fmt, delim, fmt)
     else:
         return r"(?:{}(?:{}{})+)".format(fmt, delim, fmt)
+
+def intlist_cast(delim, x):
+    print("delim: ", delim)
+    print("x: ", x)
+    
+    result = [int(n) for n in x.split(delim)]
+    print(result)
+    return result
 
 # As you can probably see it is relatively easy to add more format types.
 # Make sure you add a second entry for each new item that adds the extra
@@ -58,10 +67,10 @@ scanf_translate = [
         (r"%c", r"(.)", lambda x:x),
         (r"%\*c", r"(?:.)", None),
 
-        (r"%(\d)c", r"(.{%s})", lambda x:x),
+        (r"%(\d)c", r"(.{%s})", lambda _, x:x),
         (r"%\*(\d)c", r"(?:.{%s})", None),
 
-        (r"%(\d)d", r"([+-]?\d{%s})", int),
+        (r"%(\d)d", r"([+-]?\d{%s})", lambda _, x: int(x)),
         (r"%\*(\d)d", r"(?:[+-]?\d{%s})", None),
 
         (r"%d", r"([+-]?\d+)", int),
@@ -111,26 +120,26 @@ scanf_translate = [
 
         # TODO: These should be replaced by a generic version that captures the delimiter
 
-        (r"%\[s,\]", listify_re(r"\w+", ',', capture=True), lambda x: [s.strip() for s in x.split(',')]),
-        (r"%\*\[s,\]", listify_re(r"\w+", ',', capture=False), None),
+        (r"%\[s([^\w\s])\]", listify_re(r"\w+", '%s', capture=True), lambda delim, x: [s.strip() for s in x.split(delim)]),
+        (r"%\*\[s([^\w\s])\]", listify_re(r"\w+", '%s', capture=False), None),
         
-        (r"%\[d,\]", listify_re(DECIMAL_FMT, ',', capture=True), lambda x: [int(n) for n in x.split(',')]),
-        (r"%\*\[d,\]", listify_re(DECIMAL_FMT, ',', capture=False), None),
+        (r"%\[d([^\w\s])\]", listify_re(DECIMAL_FMT, '%s', capture=True), lambda delim, x: [int(n) for n in x.split(delim)]),
+        (r"%\*\[d([^\w\s])\]", listify_re(DECIMAL_FMT, '%s', capture=False), None),
 
-        (r"%\[[xX],\]", listify_re(HEX_FMT, ',', capture=True), lambda x: [int(n, 16) for n in x.split(',')]),
-        (r"%\*\[[xX],\]", listify_re(HEX_FMT, ',', capture=False), None),
+        (r"%\[[xX]([^\w\s])\]", listify_re(HEX_FMT, '%s', capture=True), lambda delim, x: [int(n, 16) for n in x.split(delim)]),
+        (r"%\*\[[xX]([^\w\s])\]", listify_re(HEX_FMT, '%s', capture=False), None),
 
-        (r"%\[[oO],\]", listify_re(HEX_FMT, ',', capture=True), lambda x: [int(n, 8) for n in x.split(',')]),
-        (r"%\*\[[oO],\]", listify_re(HEX_FMT, ',', capture=False), None),
+        (r"%\[[oO]([^\w\s])\]", listify_re(HEX_FMT, '%s', capture=True), lambda delim, x: [int(n, 8) for n in x.split(delim)]),
+        (r"%\*\[[oO]([^\w\s])\]", listify_re(HEX_FMT, '%s', capture=False), None),
         
-        (r"%\[[bB],\]", listify_re(BINARY_FMT, ',', capture=True), lambda x: [int(n, 2) for n in x.split(',')]),
-        (r"%\*\[[bB],\]", listify_re(BINARY_FMT, ',', capture=False), None),
+        (r"%\[[bB]([^\w\s])\]", listify_re(BINARY_FMT, '%s', capture=True), lambda delim, x: [int(n, 2) for n in x.split(delim)]),
+        (r"%\*\[[bB]([^\w\s])\]", listify_re(BINARY_FMT, '%s', capture=False), None),
         
-        (r"%\[i,\]", listify_re(INT_FMT, ',', capture=True), lambda x: [int(n, 0) for n in x.split(',')]),
-        (r"%\*\[i,\]", listify_re(INT_FMT, ',', capture=False), None),
+        (r"%\[i([^\w\s])\]", listify_re(INT_FMT, '%s', capture=True), lambda delim, x: [int(n, 0) for n in x.split(delim)]),
+        (r"%\*\[i([^\w\s])\]", listify_re(INT_FMT, '%s', capture=False), None),
         
-        (r"%\[[fgeE],\]", listify_re(FLOAT_FMT, ',', capture=True), lambda x: [float(n) for n in x.split(',')]),
-        (r"%\*\[[fgeE],\]", listify_re(FLOAT_FMT, ',',capture=False), None),
+        (r"%\[[fgeE]([^\w\s])\]", listify_re(FLOAT_FMT, '%s', capture=True), lambda delim, x: [float(n) for n in x.split(delim)]),
+        (r"%\*\[[fgeE]([^\w\s])\]", listify_re(FLOAT_FMT, '%s',capture=False), None),
         
         (r"%r", r"(.*$)", lambda x: x),
         (r"%\*r", r"(?:.*$)", None),
@@ -163,9 +172,12 @@ def scanf_compile(format, collapseWhitespace=True):
         for token, pattern, cast in scanf_translate:
             found = token.match(format, i)
             if found:
-                if cast: # cast != None
-                    cast_list.append(cast)
                 groups = found.groupdict() or found.groups()
+                if cast: # cast != None
+                    if groups:
+                        cast_list.append(functools.partial(cast, *groups))
+                    else:
+                        cast_list.append(cast)
                 if groups:
                     pattern = pattern % groups
                 format_pat += pattern
