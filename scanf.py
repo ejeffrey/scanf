@@ -32,7 +32,7 @@ __version__ = '1.5.2'
 __all__ = ["scanf", 'extractdata', 'scanf_translate', 'scanf_compile']
 
 
-DEBUG = True
+DEBUG = False
 
 DECIMAL_FMT = r"(?:[+-]?\d+)"
 OCTAL_FMT = r"(?:(?:0[oO])?[0-7]+)"
@@ -119,8 +119,6 @@ scanf_translate = [
         
         (r"%\[[fgeE]\]", listify_re(FLOAT_FMT, capture=True), lambda x: [float(n) for n in x.split()]),
         (r"%\*\[[fgeE]\]", listify_re(FLOAT_FMT, capture=False), None),
-
-        # TODO: These should be replaced by a generic version that captures the delimiter
 
         (r"%\[s([^\w\s])\]", listify_re(r"\w+", '%s', capture=True), lambda delim, x: [s.strip() for s in x.split(delim)]),
         (r"%\*\[s([^\w\s])\]", listify_re(r"\w+", '%s', capture=False), None),

@@ -102,11 +102,11 @@ def test_multiple():
     mac =  scanf_star("%X:%X:%X:%X:%X:%X", "04:23:AB:03:ef:01")
     assert mac == (0x4, 0x23, 0xab, 0x3, 0xef, 0x1)
     
-#@pytest.mark.xfail(reason="Not implemented yet")
 def test_list():
     assert scanf_star("%[d]", "4 2 2")[0] == [4, 2, 2]
     assert scanf_star("%[i]", "42 0x42 0xfE")[0] == [42, 0x42, 0xfe]
     assert scanf_star("%[s]", "A bunch of words")[0] == "A bunch of words".split()
+    assert scanf_star("%[f]", "42 21.2 93.12")[0] == [42,21.2,93.12]
 
 def test_separators():
     assert scanf_star("%[d,]", "4, 2, 2")[0] == [4, 2, 2]
@@ -117,3 +117,4 @@ def test_separators():
     assert scanf_star("%[d.]", "192.168.  1.  1")[0] == [192, 168, 1, 1]
     assert scanf_star("%[x:]", "04:42:ab:C0:DF:4A")[0] == [0x04, 0x42, 0xAB, 0xC0, 0xDF, 0x4A]
     assert scanf_star("%[s,]", "comma, separated, values")[0] == ["comma", "separated", "values"]
+    assert scanf_star("%[f,]", "42,21.2,93.12")[0] == [42,21.2,93.12]
