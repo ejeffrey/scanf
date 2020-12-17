@@ -47,9 +47,9 @@ def listify_re(fmt, delim=None, capture=False):
     else:
         delim = delim + r"\s*"
     if capture:
-        return r"({}(?:{}{})+)".format(fmt, delim, fmt)
+        return r"({}(?:{}{})*)".format(fmt, delim, fmt)
     else:
-        return r"(?:{}(?:{}{})+)".format(fmt, delim, fmt)
+        return r"(?:{}(?:{}{})*)".format(fmt, delim, fmt)
 
 def intlist_cast(delim, x):
     print("delim: ", delim)

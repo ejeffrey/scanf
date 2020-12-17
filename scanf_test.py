@@ -107,6 +107,7 @@ def test_list():
     assert scanf_star("%[i]", "42 0x42 0xfE")[0] == [42, 0x42, 0xfe]
     assert scanf_star("%[s]", "A bunch of words")[0] == "A bunch of words".split()
     assert scanf_star("%[f]", "42 21.2 93.12")[0] == [42,21.2,93.12]
+    assert scanf_star("%[d]", "42")[0] == [42]
 
 def test_separators():
     assert scanf_star("%[d,]", "4, 2, 2")[0] == [4, 2, 2]
