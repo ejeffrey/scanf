@@ -2,18 +2,17 @@
 import scanf
 import pytest
 
-def scanf_star(fmt, data, *args):
-    """Wrap a scanf call to also test null conversion"""
-
+def scanf_star(fmt, data, *args, **kw):
+    """Wrap a scanf test to also test null conversion"""
     
-    result = scanf.scanf(fmt, data, *args)
+    result = scanf.scanf(fmt, data, *args, **kw)
     if result is None:
         return result
     null_fmt = fmt.replace('%', '%*')
-    assert scanf.scanf(null_fmt, data, *args) == ()
+    assert scanf.scanf(null_fmt, data, *args, **kw) == ()
     if "%r" not in fmt:
-        result_w_rest = scanf.scanf(fmt + r"%r", data, *args)
-        rest_only = scanf.scanf(null_fmt + r"%r", data, *args)
+        result_w_rest = scanf.scanf(fmt + r"%r", data, *args, **kw)
+        rest_only = scanf.scanf(null_fmt + r"%r", data, *args, **kw)
         assert result_w_rest[-1] == rest_only[0]
     return result
 
@@ -31,17 +30,21 @@ def test_float():
 
 def test_skip_beginning():
     """Note, this behavior is different from C stdlib"""
-    assert scanf_star("%e", "abc 321e-1") == (32.1,)
+    assert scanf_star("%e", "abc 321e-1", search=True) == (32.1,)
 
 def test_literals():
-    assert scanf_star("is: %d", "The number is: 52") == (52,)
-    assert scanf_star("is: %d", "The number is 52") is None
-    assert scanf_star("is: %d", "The number is: \n 52") == (52,)
+    assert scanf_star("The number is:  %d", "The number is: 52") == (52,)
+    assert scanf_star("is: %d", "The number   is 52", search=True) is None
+    assert scanf_star("is: %d", "The number is: \n 52", search=True) == (52,)
+    assert scanf.scanf("%d%% / %d", "80% / 20%") == (80, 20)
+    assert scanf.scanf("%d%%s / %d", "80%s / 20%") == (80, 20)
+    assert scanf.scanf("^%s", "^caret")[0] == "caret"
 
 def test_char():
     assert scanf_star("%c", "abc") == ('a',)
     assert scanf_star("%3c", "abc") == ('abc',)
     assert scanf_star("%5c", "abc") is None
+    assert scanf_star("%12c has %d", "dodecahedron has 12 letters") == ("dodecahedron", 12)
     assert scanf_star("%s", "The first word") == ("The",)
     assert scanf_star("%s", "Including: punctuation") == ("Including:",)
 
@@ -49,6 +52,10 @@ def test_decimal():
     assert scanf_star("%d", "50")[0] == 50
     assert scanf_star("%d", "050")[0] == 50
     assert scanf_star("%d", "0x50")[0] == 0
+
+    assert scanf_star("%u", "-50") is None
+    assert scanf_star("%u", "50")[0] == 50
+    assert scanf_star("%u", "050")[0] == 50
 
 def test_signed():
     assert scanf_star("%d", "-42")[0] == -42
@@ -70,9 +77,8 @@ def test_octal():
     assert scanf_star("%o", "0O50")[0] == 0o50
 
 def test_rest():
-    n, r = scanf.scanf("%d %r", "99 bottles of beer on the wall")
-    assert n == 99
-    assert r == "bottles of beer on the wall"
+    assert scanf.scanf("%d %r", "99 bottles of beer on the wall") == (99, "bottles of beer on the wall")
+    assert scanf.scanf("%d %r string", "42 the rest of the string") == None
     
 def test_binary():
     assert scanf_star("%b", "1100")[0] == 12
@@ -99,7 +105,8 @@ def test_multiple():
 #@pytest.mark.xfail(reason="Not implemented yet")
 def test_list():
     assert scanf_star("%[d]", "4 2 2")[0] == [4, 2, 2]
-    assert scanf_star("%[s]", "A bunch of words") == ("A bunch of words".split(),)
+    assert scanf_star("%[i]", "42 0x42 0xfE")[0] == [42, 0x42, 0xfe]
+    assert scanf_star("%[s]", "A bunch of words")[0] == "A bunch of words".split()
 
 def test_separators():
     assert scanf_star("%[d,]", "4, 2, 2")[0] == [4, 2, 2]
@@ -108,5 +115,5 @@ def test_separators():
     assert scanf_star("%[i,]", "0x32,0o10, 0B110, 53, 21")[0] == [0x32, 0o10, 0B110, 53, 21]
     assert scanf_star("%[d.]", "192.168.1.1")[0] == [192, 168, 1, 1]
     assert scanf_star("%[d.]", "192.168.  1.  1")[0] == [192, 168, 1, 1]
-    assert scanf_star("%[x:]", "04:42:AB:C0:DF:4A")[0] == [0x04, 0x42, 0xAB, 0xC0, 0xDF, 0x4A]
+    assert scanf_star("%[x:]", "04:42:ab:C0:DF:4A")[0] == [0x04, 0x42, 0xAB, 0xC0, 0xDF, 0x4A]
     assert scanf_star("%[s,]", "comma, separated, values")[0] == ["comma", "separated", "values"]

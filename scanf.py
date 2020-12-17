@@ -64,14 +64,16 @@ def intlist_cast(delim, x):
 #   few characters needed to handle the field ommision.
 scanf_translate = [
     (re.compile(_token), _pattern, _cast) for _token, _pattern, _cast in [
+        (r"%%", r"%", None),
+
         (r"%c", r"(.)", lambda x:x),
         (r"%\*c", r"(?:.)", None),
 
-        (r"%(\d)c", r"(.{%s})", lambda _, x:x),
-        (r"%\*(\d)c", r"(?:.{%s})", None),
+        (r"%(\d+)c", r"(.{%s})", lambda _, x:x),
+        (r"%\*(\d+)c", r"(?:.{%s})", None),
 
-        (r"%(\d)d", r"([+-]?\d{%s})", lambda _, x: int(x)),
-        (r"%\*(\d)d", r"(?:[+-]?\d{%s})", None),
+        (r"%(\d+)d", r"([+-]?\d{%s})", lambda _, x: int(x)),
+        (r"%\*(\d+)d", r"(?:[+-]?\d{%s})", None),
 
         (r"%d", r"([+-]?\d+)", int),
         (r"%\*d", r"(?:[+-]?\d+)", None),
@@ -140,7 +142,7 @@ scanf_translate = [
         
         (r"%\[[fgeE]([^\w\s])\]", listify_re(FLOAT_FMT, '%s', capture=True), lambda delim, x: [float(n) for n in x.split(delim)]),
         (r"%\*\[[fgeE]([^\w\s])\]", listify_re(FLOAT_FMT, '%s',capture=False), None),
-        
+
         (r"%r", r"(.*$)", lambda x: x),
         (r"%\*r", r"(?:.*$)", None),
     ]]
@@ -199,7 +201,7 @@ def scanf_compile(format, collapseWhitespace=True):
     return format_re, cast_list
 
 
-def scanf(format, s=None, collapseWhitespace=True):
+def scanf(format, s=None, collapseWhitespace=True, search=False):
     """
     scanf supports the following formats:
       %c        One character
@@ -227,7 +229,10 @@ def scanf(format, s=None, collapseWhitespace=True):
 
     format_re, casts = scanf_compile(format, collapseWhitespace)
 
-    found = format_re.search(s)
+    if search:
+        found = format_re.search(s)
+    else:
+        found = format_re.match(s)
     if found:
         groups = found.groups()
         return tuple([casts[i](groups[i]) for i in range(len(groups))])
